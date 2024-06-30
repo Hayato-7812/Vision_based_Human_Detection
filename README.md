@@ -103,11 +103,6 @@
 
 ## 学習結果
 
-`train.py`を実行すると、以下のような結果が表示される。
-
-learning_curve_rbf.png
-
-
 ```
 {'C': 10, 'gamma': 0.01, 'kernel': 'rbf'}
 Model saved as svm_model.pkl
@@ -124,3 +119,5 @@ weighted avg       1.00      0.99      0.99       200
 Accuracy: 0.9950
 
 ```
+
+<img width="1004" alt="image" src="https://github.com/Hayato-7812/Vision_based_Human_Detection/assets/63275973/444ae93f-8a02-4803-9efb-115f8fa0abb3">
