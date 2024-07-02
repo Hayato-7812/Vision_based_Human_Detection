@@ -1,6 +1,6 @@
 import cv2
-import sys
 import os
+import sys
 
 # コマンドライン引数から入力ディレクトリと出力ディレクトリを取得
 if len(sys.argv) != 3:
@@ -35,7 +35,7 @@ for filename in os.listdir(input_dir):
             print(f"Warning: Could not read image {input_path}")
             continue
         
-        # フレームをグレースケールに変換する
+        # 画像をグレースケールに変換する
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
         # HOG特徴量を使用して人を検出
@@ -43,8 +43,8 @@ for filename in os.listdir(input_dir):
         
         # 検出された人に対してバウンディングボックスを描画
         for (x, y, w, h), weight in zip(boxes, weights):
-            # if weight > 0.5:  # 信頼度スコアが0.5以上の場合に描画
-            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            if weight > 0.5:  # 信頼度スコアが0.5以上の場合に描画
+                cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
         
         # 検出結果を出力ディレクトリに保存
         cv2.imwrite(output_path, img)

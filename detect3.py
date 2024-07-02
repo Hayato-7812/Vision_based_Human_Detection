@@ -25,7 +25,7 @@ def extract_hog_features(image):
     hog = cv2.HOGDescriptor()
     return hog.compute(image)
 
-def detect_human_multiscale(image, model, window_size=(64, 128), step_size=4, scale=1.5, confidence_threshold=0.98):
+def detect_human_multiscale(image, model, window_size=(64, 128), step_size=32, scale=1.2, confidence_threshold=0.9):
     detections = []
     confidences = []
     for resized in pyramid(image, scale=scale):
@@ -98,57 +98,52 @@ def filter_boxes_by_size(boxes, confidences, image_shape, min_ratio=(0.1, 0.3)):
             filtered_confidences.append(confidence)
     return np.array(filtered_boxes), np.array(filtered_confidences)
 
-# コマンドライン引数から入力ディレクトリと出力ディレクトリを取得
-if len(sys.argv) != 3:
-    print("Usage: python detect_images.py <input_directory> <output_directory>")
-    sys.exit(1)
+def process_video(input_file, output_file, model):
+    cap = cv2.VideoCapture(input_file)
+    if not cap.isOpened():
+        print(f"Error: Cannot open video file {input_file}")
+        sys.exit(1)
 
-input_dir = sys.argv[1]
-output_dir = sys.argv[2]
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-# 入力ディレクトリが存在するか確認
-if not os.path.exists(input_dir):
-    print(f"Error: Input directory {input_dir} does not exist.")
-    sys.exit(1)
+    out = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-# 出力ディレクトリが存在しない場合は作成
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+    for _ in tqdm(range(total_frames), desc="Processing frames"):
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-# 保存されたモデルをロード
-# model = joblib.load('hog_svm_model_notebook2.pkl')
-model = joblib.load('svm_model.pkl')
-
-# 入力ディレクトリ内のすべての画像ファイルを処理
-for filename in tqdm(os.listdir(input_dir), desc="Processing images"):
-    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
-        input_path = os.path.join(input_dir, filename)
-        output_path = os.path.join(output_dir, filename)
-        
-        # 画像を読み込む
-        img = cv2.imread(input_path)
-        if img is None:
-            print(f"Warning: Could not read image {input_path}")
-            continue
-        
-        # グレースケールに変換
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # 複数のスケールで人を検出
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         detections, confidences = detect_human_multiscale(gray, model)
-        
-        # バウンディングボックスのサイズをフィルタリング
-        detections, confidences = filter_boxes_by_size(detections, confidences, gray.shape, min_ratio=(0.1, 0.1))
-        
-        # 非極大抑制を適用
+        detections, confidences = filter_boxes_by_size(detections, confidences, gray.shape, min_ratio=(0.1, 0.3))
         final_detections = non_max_suppression(detections, confidences, overlapThresh=0.05)
-        
-        # 検出結果を描画
-        for (x1, y1, x2, y2) in final_detections:
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        
-        # 検出結果を出力ディレクトリに保存
-        cv2.imwrite(output_path, img)
-        print(f"Processed {input_path}, saved to {output_path}")
 
-print("Detection finished for all images in the directory.")
+        for (x1, y1, x2, y2) in final_detections:
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+        out.write(frame)
+
+    cap.release()
+    out.release()
+    print(f"Detection finished. Output saved as {output_file}")
+
+# コマンドライン引数から入力ファイルを取得
+if len(sys.argv) != 2:
+    print("Usage: python detect_video.py <input_video.mp4>")
+    sys.exit(1)
+
+input_file = sys.argv[1]
+
+# model_name = "hog_svm_model_notebook2.pkl"
+model_name = "svm_model.pkl"
+# 保存されたモデルをロード
+model = joblib.load(model_name)
+
+output_file = os.path.splitext(input_file)[0] + f"_output_{model_name}.mp4"
+
+# ビデオを処理して出力
+process_video(input_file, output_file, model)

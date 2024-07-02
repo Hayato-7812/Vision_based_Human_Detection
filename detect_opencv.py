@@ -8,7 +8,7 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 input_file = sys.argv[1]
-output_file = os.path.splitext(input_file)[0] + "_hog_output.mp4"
+output_file = os.path.splitext(input_file)[0] + "_hog_output_openCV.mp4"
 
 # HOG Descriptorを初期化
 hog = cv2.HOGDescriptor()
